@@ -12,12 +12,9 @@ async function fix(pkg) {
   const fixed = `${cwd}/node_modules/.fixed/${pkg}`;
   await rm(fixed, { recursive: true, force: true });
   await cp(`${cwd}/node_modules/${pkg}`, fixed, { recursive: true });
-  const manifest = JSON.parse(await readFile(`${fixed}/package.json`, "utf8"));
-  manifest.sideEffects.push(
-    "./src/ensureNativeModulesAreInstalled.ts",
-    "./build/ensureNativeModulesAreInstalled.js",
-  );
-  await writeFile(`${fixed}/package.json`, JSON.stringify(manifest, null, 2));
+  const call = "import { installExpoGlobalPolyfill } from './polyfill/dangerous-internal';\n\nexport function ensureNativeModulesAreInstalled() {\n  installExpoGlobalPolyfill();\n}\n";
+  await writeFile(`${fixed}/src/ensureNativeModulesAreInstalled.ts`, call);
+  await writeFile(`${fixed}/build/ensureNativeModulesAreInstalled.js`, call).catch(() => {});
   return fixed;
 }
 

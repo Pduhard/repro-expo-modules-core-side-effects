@@ -25,7 +25,7 @@ node repro.mjs
 ```
 
 - Bundles `import { EventEmitter } from "expo-modules-core"` for web with Rolldown, `vite build` and esbuild, then runs it in Node.
-- `published`: the package as on npm. `fixed`: the same package with `./src/ensureNativeModulesAreInstalled.ts` and `./build/ensureNativeModulesAreInstalled.js` added to `sideEffects`.
+- `published`: the package as on npm. `fixed`: the same package where the web `ensureNativeModulesAreInstalled()` calls `installExpoGlobalPolyfill()` instead of importing `./polyfill`.
 
 ## Result
 
@@ -45,6 +45,7 @@ expo-modules-core 58.0.18  esbuild          fixed     BUILD .../build/ts-declara
 ```
 
 - esbuild keeps the polyfill only because it does not drop the empty call.
+- With the fix the call is no longer empty, so no bundler can drop it, whatever `sideEffects` says.
 - The 58 esbuild error is unrelated: `ts-declarations/global.ts` imports type-only names as values. `shimMissingExports` hides the same error from Rolldown and Vite here.
 - Vite's dev-server dependency optimizer does not hit it in a plain config: its resolver leaves `sideEffects` out outside `vite build`.
 
