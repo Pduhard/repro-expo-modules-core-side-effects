@@ -14,7 +14,7 @@ const EventEmitter = globalThis.expo.EventEmitter;
 ```
 
 - `ensureNativeModulesAreInstalled.ts` exists on web only to load the polyfill, but `sideEffects` declares it pure.
-- Rolldown trusts that: the empty call goes, then the module, then the polyfill it imports.
+- Rolldown, and so `vite build` on Vite 8, trusts that: the empty call goes, then the module, then the polyfill it imports.
 - `EventEmitter.ts` reads `globalThis.expo` before anything sets it.
 
 ## Run
@@ -24,7 +24,7 @@ npm install
 node repro.mjs
 ```
 
-- Bundles `import { EventEmitter } from "expo-modules-core"` for web, then runs it in Node.
+- Bundles `import { EventEmitter } from "expo-modules-core"` for web with Rolldown, `vite build` and esbuild, then runs it in Node.
 - `published`: the package as on npm. `fixed`: the same package with `./src/ensureNativeModulesAreInstalled.ts` and `./build/ensureNativeModulesAreInstalled.js` added to `sideEffects`.
 
 ## Result
@@ -32,16 +32,21 @@ node repro.mjs
 ```
 expo-modules-core 57.0.23  rolldown 1.2.14  published FAIL Cannot read properties of undefined (reading 'EventEmitter')
 expo-modules-core 57.0.23  rolldown 1.2.14  fixed     OK   EventEmitter is a function
+expo-modules-core 57.0.23  vite 8.3.4       published FAIL Cannot read properties of undefined (reading 'EventEmitter')
+expo-modules-core 57.0.23  vite 8.3.4       fixed     OK   EventEmitter is a function
 expo-modules-core 57.0.23  esbuild          published OK   EventEmitter is a function
 expo-modules-core 57.0.23  esbuild          fixed     OK   EventEmitter is a function
 expo-modules-core 58.0.18  rolldown 1.2.14  published FAIL Cannot read properties of undefined (reading 'EventEmitter')
 expo-modules-core 58.0.18  rolldown 1.2.14  fixed     OK   EventEmitter is a function
-expo-modules-core 58.0.18  esbuild          published BUILD ... No matching export in ".../build/ts-declarations/EventEmitter.js" for import "EventEmitter"
-expo-modules-core 58.0.18  esbuild          fixed     BUILD ... No matching export in ".../build/ts-declarations/EventEmitter.js" for import "EventEmitter"
+expo-modules-core 58.0.18  vite 8.3.4       published FAIL Cannot read properties of undefined (reading 'EventEmitter')
+expo-modules-core 58.0.18  vite 8.3.4       fixed     OK   EventEmitter is a function
+expo-modules-core 58.0.18  esbuild          published BUILD .../build/ts-declarations/global.js:1:9: ERROR: No matching export in ".../build/ts-declarations/EventEmitter.js" for import "EventEmitter"
+expo-modules-core 58.0.18  esbuild          fixed     BUILD .../build/ts-declarations/global.js:1:9: ERROR: No matching export in ".../build/ts-declarations/EventEmitter.js" for import "EventEmitter"
 ```
 
 - esbuild keeps the polyfill only because it does not drop the empty call.
-- The 58 esbuild error is unrelated: `ts-declarations/global.ts` imports type-only names as values. `shimMissingExports` hides the same error from Rolldown here.
+- The 58 esbuild error is unrelated: `ts-declarations/global.ts` imports type-only names as values. `shimMissingExports` hides the same error from Rolldown and Vite here.
+- Vite's dev-server dependency optimizer does not hit it in a plain config: its resolver leaves `sideEffects` out outside `vite build`.
 
 ## Related
 
